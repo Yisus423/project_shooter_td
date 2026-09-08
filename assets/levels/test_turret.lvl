@@ -1,0 +1,8 @@
+# Test level - turret only
+# W=wall, S=floor, D=door, P=player_spawn, E=enemy_spawn, F=dog_spawn, T=turret_spawn, C=chest
+# Open arena: turret 6 tiles from the player (outside its 4-tile ring until you approach).
+W W W W W W W W W W
+W S S S S S S S S W
+W S P S S S S S T W
+W S S S S S S S S W
+W W W W W W W W W W

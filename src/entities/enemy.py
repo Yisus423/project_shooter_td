@@ -77,3 +77,27 @@ class Dog(Enemy):
             "attack": MeleeAttackState,
         }
         self.set_state_by_name("idle")
+
+
+class Turret(Enemy):
+    """Static armed enemy: shoots on sight, never moves.
+
+    The states dict has no "chase": the turret physically cannot pursue.
+    Detection radius equals attack range — if the player is detected, they
+    are already inside firing range.
+    """
+
+    def __init__(self, game, model_name=None, grid_pos=(0, 0), tile_size=1.0):
+        super().__init__(game, model_name, grid_pos, tile_size)
+
+        self.life = game.settings.get("game.turret_life", 50)
+        self.max_life = self.life
+        self.attack_range = tile_size * game.settings.get("game.turret_attack_range", 4.0)
+        self.aggro_range = self.attack_range
+        self.shoot_rate = game.settings.get("game.turret_shoot_rate", 0.1)
+
+        self.states = {
+            "idle": IdleState,
+            "attack": ShootState,
+        }
+        self.set_state_by_name("idle")
