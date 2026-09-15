@@ -17,6 +17,9 @@ class IdleState(EnemyState):
 
         dist = context[2]
         if dist <= self.enemy.aggro_range:
+            if not self._can_see_player(context):
+                # Player is close but a wall blocks sight: stay idle.
+                return
             if dist <= self.enemy.attack_range:
                 self.enemy.set_state_by_name("attack")
             else:
@@ -36,7 +39,9 @@ class ChaseState(EnemyState):
             self.enemy.set_state_by_name("idle")
             return
 
-        if dist <= self.enemy.attack_range:
+        if dist <= self.enemy.attack_range and self._can_see_player(context):
+            # Only commit to the attack state when the player is actually
+            # visible; otherwise keep closing in (chase itself needs no LOS).
             self.enemy.set_state_by_name("attack")
             return
 
@@ -55,6 +60,12 @@ class ShootState(EnemyState):
         nx, ny, dist, level = context
         if dist > self.enemy.attack_range:
             self.enemy.set_state_by_name("chase")
+            return
+
+        if not self._can_see_player(context):
+            # Lost sight (e.g. a wall blocks the ray): drop to idle. This also
+            # gives enemies without a "chase" state a way out of ShootState.
+            self.enemy.set_state_by_name("idle")
             return
 
         self.enemy.shoot(level)
@@ -81,6 +92,10 @@ class MeleeAttackState(EnemyState):
         nx, ny, dist, level = context
         if dist > self.enemy.attack_range:
             self.enemy.set_state_by_name("chase")
+            return
+
+        if not self._can_see_player(context):
+            # A blocked bite would be a hit through a wall: skip it.
             return
 
         self.enemy.aim(nx, ny)

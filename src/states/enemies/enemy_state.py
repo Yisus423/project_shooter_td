@@ -45,3 +45,15 @@ class EnemyState:
             return None
 
         return (dx / dist, dy / dist, dist, gameplay.level)
+
+    def _can_see_player(self, context):
+        """Shared perception rule for all states: True when no non-walkable
+        tile blocks the straight line from this enemy to the player.
+
+        `context` is the tuple returned by _player_context(); its level is
+        used to raycast between the two world positions.
+        """
+        _, _, _, level = context
+        return level.has_line_of_sight(
+            self.enemy.get_position(), level.player.get_position()
+        )

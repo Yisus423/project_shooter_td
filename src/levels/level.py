@@ -1,3 +1,5 @@
+import math
+
 from src.entities.tile import Tile
 from src.entities.player import Player
 from src.entities.enemy import Enemy
@@ -14,6 +16,7 @@ class Level:
         self.tile_size = game.settings.get("game.tile_size", 1.0)
 
         self.tiles = []
+        self._tile_map = {}
         self.entities = []
         self.projectiles = []
         self.melee_hitboxes = []
@@ -40,6 +43,125 @@ class Level:
                 tile = Tile(self.game, tile_data, self.tile_size)
                 tile.node.reparentTo(self.root)
                 self.tiles.append(tile)
+                self._tile_map[(tile.grid_x, tile.grid_y)] = tile
+
+    def tile_at(self, grid_x, grid_y):
+        """Return the tile at a grid cell, or None when the cell is empty.
+
+        Uses an O(1) dict lookup instead of scanning the flat tile list.
+        """
+        return self._tile_map.get((grid_x, grid_y))
+
+    def has_line_of_sight(self, from_pos, to_pos):
+        """Return True when no non-walkable tile blocks the straight line
+        between two world positions.
+
+        Used by enemy AI perception: a wall (or any non-walkable tile) between
+        an enemy and the player breaks sight, melee bites, and shots.
+
+        The segment is traversed with an Amanatides-Woo style grid DDA:
+        starting from the shooter's cell, we repeatedly cross the nearest cell
+        boundary until we reach the target cell, visiting every cell the
+        segment passes through. Diagonals are lenient: a ray that crosses an
+        exact cell corner visits only the diagonal cell, so squeezing exactly
+        through a corner is allowed.
+
+        The start and end cells are never checked: the shooter's own tile must
+        not block the ray, and the target tile is the player's. Cells without
+        a tile entry (e.g. the player spawn) are treated as open ground.
+
+        Args:
+            from_pos: World (x, y) of the observer.
+            to_pos: World (x, y) of the target.
+
+        Returns:
+            True when the segment crosses only walkable (or empty) cells.
+        """
+        ts = self.tile_size
+
+        # Cell index for a coordinate c matches Character.move()'s
+        # int(round(pos / tile_size)) for on-center positions.
+        start_cell = (
+            int(round(from_pos[0] / ts)),
+            int(round(from_pos[1] / ts)),
+        )
+        end_cell = (
+            int(round(to_pos[0] / ts)),
+            int(round(to_pos[1] / ts)),
+        )
+
+        # Shooter and player share a cell: nothing can be in between.
+        if start_cell == end_cell:
+            return True
+
+        # Convert to grid space: cell centers sit at integer coordinates and
+        # cell boundaries at half-integers.
+        u0 = from_pos[0] / ts
+        v0 = from_pos[1] / ts
+        du = to_pos[0] / ts - u0
+        dv = to_pos[1] / ts - v0
+
+        step_u = 1 if du > 0 else -1
+        step_v = 1 if dv > 0 else -1
+
+        # t is the parametric position along the segment (0 at from_pos, 1 at
+        # to_pos). tDelta is the t step needed to cross one full cell along
+        # each axis; an axis-aligned ray never crosses boundaries on the other
+        # axis, so its tDelta is infinity.
+        t_delta_u = math.inf if du == 0 else abs(1.0 / du)
+        t_delta_v = math.inf if dv == 0 else abs(1.0 / dv)
+
+        # tMax is the t at which the ray crosses the first boundary of the
+        # start cell on each axis.
+        if du > 0:
+            t_max_u = (start_cell[0] + 0.5 - u0) / du
+        elif du < 0:
+            t_max_u = (start_cell[0] - 0.5 - u0) / du
+        else:
+            t_max_u = math.inf
+
+        if dv > 0:
+            t_max_v = (start_cell[1] + 0.5 - v0) / dv
+        elif dv < 0:
+            t_max_v = (start_cell[1] - 0.5 - v0) / dv
+        else:
+            t_max_v = math.inf
+
+        gx, gy = start_cell
+        while (gx, gy) != end_cell:
+            # Cross whichever boundary comes first along the ray. When the
+            # next crossing lies beyond the end of the segment, the target
+            # cell has effectively been reached (float rounding may skip the
+            # exact end cell): stop without blocking sight.
+            if t_max_u < t_max_v:
+                if t_max_u > 1.0:
+                    break
+                gx += step_u
+                t_max_u += t_delta_u
+            elif t_max_v < t_max_u:
+                if t_max_v > 1.0:
+                    break
+                gy += step_v
+                t_max_v += t_delta_v
+            else:
+                # Exact corner crossing: step both axes at once so only the
+                # diagonal cell is visited (symmetric lenient policy).
+                if t_max_u > 1.0:
+                    break
+                gx += step_u
+                t_max_u += t_delta_u
+                gy += step_v
+                t_max_v += t_delta_v
+
+            # Skip the end cell: that is the player's tile.
+            if (gx, gy) == end_cell:
+                break
+
+            tile = self.tile_at(gx, gy)
+            if tile is not None and not tile.walkable:
+                return False
+
+        return True
 
     def _build_player(self):
         spawn = self.data["player_spawn"]

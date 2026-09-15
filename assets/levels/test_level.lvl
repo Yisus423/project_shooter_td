@@ -1,0 +1,16 @@
+# Test level - line of sight (LOS)
+# W=wall, S=floor, D=door, P=player_spawn, E=enemy_spawn, F=dog_spawn, C=chest
+# Wall column with a single gap at the open middle row.
+# - Top enemy (7,2): inside aggro range but the wall blocks the line -> stays
+#   idle until the player shows up through the gap.
+# - Bottom enemy (7,5): clear diagonal line through the gap -> chases (and
+#   attacks once within range with sight).
+# - Dog (2,4): clear line, close range -> chases and bites; hide behind the
+#   wall and it stops biting (no bite through walls) but keeps chasing.
+W W W W W W W W W W
+W S S S S W S S S W
+W S P S S W S E S W
+W S S S S W S S S W
+W S F S S S S S S W
+W S S S S W S E S W
+W W W W W W W W W W
