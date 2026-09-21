@@ -5,7 +5,7 @@ reference each other and can live in a single module without imports
 between them. The set of available states is chosen per enemy.
 """
 from src.states.enemies.enemy_state import EnemyState
-
+from src.systems.pathfinding import next_step
 
 class IdleState(EnemyState):
     """Player out of aggro range: do nothing."""
@@ -39,8 +39,21 @@ class ChaseState(EnemyState):
         if dist <= self.enemy.attack_range:
             self.enemy.set_state_by_name("attack")
             return
+        step = next_step(
+            self.enemy.get_position(),
+            level.player.get_position(),
+            level.tiles,
+            self.enemy.tile_size,
+            level.data["width"],
+            level.data["height"],
+        )
+        if step:
+            dx, dy = step
+        else:
+            dx, dy = nx, ny # unreachable: straight line, as before the pathfinding
 
-        self.enemy.move(nx, ny, dt, level.tiles)
+
+        self.enemy.move(dx, dy, dt, level.tiles)
         self.enemy.aim(nx, ny)
 
 
