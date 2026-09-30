@@ -1,5 +1,5 @@
 from direct.gui.OnscreenText import OnscreenText
-from src.ui.fonts import ingame_font
+from src.ui.fonts import ingame_font, INGAME_TEXT_SCALE
 
 
 class HUD:
@@ -99,9 +99,11 @@ class HUD:
         )
         self.elements.append(self.ammo_label)
 
-        # One TextNode per OnscreenText: set the font once for all static labels
+        # One TextNode per OnscreenText: set font + calibrated text scale once
+        # for all static labels, so they render at the default font's size
         for element in self.elements:
             element.textNode.setFont(self.font)
+            element.textNode.setTextScale(INGAME_TEXT_SCALE)
 
     def show(self):
         for elem in self.elements:

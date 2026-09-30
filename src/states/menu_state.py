@@ -1,6 +1,6 @@
 from panda3d.core import TextNode, CardMaker, NodePath, Vec4
 from src.states.state_base import StateBase
-from src.ui.fonts import menu_font
+from src.ui.fonts import menu_font, MENU_TEXT_SCALE
 
 
 class MenuState(StateBase):
@@ -35,6 +35,7 @@ class MenuState(StateBase):
         tn.setAlign(TextNode.ACenter)
         tn.setTextColor(color)
         tn.setFont(menu_font(self.game))
+        tn.setTextScale(MENU_TEXT_SCALE)
         tn.setShadow(0.04, 0.04)
         tn.setShadowColor(Vec4(0, 0, 0, 1))
         node_path = self.game.aspect2d.attachNewNode(tn.generate())
